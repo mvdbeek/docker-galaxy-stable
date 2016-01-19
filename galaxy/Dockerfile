@@ -11,6 +11,9 @@ MAINTAINER Björn A. Grüning, bjoern.gruening@gmail.com
 # * Enable the @natefoo magic
 # Web server infrastructure matching usegalaxy.org - supervisor, uwsgi, and nginx.
 
+
+## TODO: How to manage environmental variables ... Recover them in the variables file?
+
 ENV GALAXY_RELEASE=release_16.01 \
 GALAXY_REPO=https://github.com/galaxyproject/galaxy \
 GALAXY_ROOT=/galaxy-central \
@@ -36,11 +39,16 @@ UWSGI_THREADS=4 \
 # Set the number of Galaxy handlers
 GALAXY_HANDLER_NUMPROCS=2 \
 # Setting a standard encoding. This can get important for things like the unix sort tool.
+
+## TODO: This needs a test!
+
 LC_ALL=en_US.UTF-8 \
 LANG=en_US.UTF-8
 
 RUN locale-gen en_US.UTF-8 && dpkg-reconfigure locales
 
+
+## -> ansible-galaxy-os
 
 # Create the postgres user before apt-get does (with the configured UID/GID) to facilitate sharing /export/postgresql with non-Linux hosts
 RUN groupadd -r postgres -g $GALAXY_POSTGRES_GID && \
@@ -59,11 +67,15 @@ RUN apt-get -qq update && apt-get install --no-install-recommends -y apt-transpo
     apt-get purge -y software-properties-common && \
     apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+## TODO: Add galaxy to docker group
+
 RUN groupadd -r $GALAXY_USER -g $GALAXY_GID && \
     useradd -u $GALAXY_UID -r -g $GALAXY_USER -d $GALAXY_HOME -c "Galaxy user" $GALAXY_USER && \
     mkdir $EXPORT_DIR $GALAXY_HOME && chown -R $GALAXY_USER:$GALAXY_USER $GALAXY_HOME $EXPORT_DIR && \
     gpasswd -a $GALAXY_USER docker
 ADD ./bashrc $GALAXY_HOME/.bashrc
+
+## TODO: Is this possible with the current galaxy role?
 
 # Download latest stable release of Galaxy.
 RUN mkdir $GALAXY_ROOT && \
@@ -73,7 +85,7 @@ RUN mkdir $GALAXY_ROOT && \
     mkdir -p $GALAXY_CONFIG_DIR $GALAXY_CONFIG_DIR/web && \
     chown -R $GALAXY_USER:$GALAXY_USER $GALAXY_CONFIG_DIR
 
-RUN su $GALAXY_USER -c "cp $GALAXY_ROOT/config/galaxy.ini.sample $GALAXY_CONFIG_FILE"
+RUN su $GALAXY_USER -c "cp $GALAXY_ROOT/config/galaxy.ini.sample "
 ADD ./reports_wsgi.ini.sample $GALAXY_CONFIG_DIR/reports_wsgi.ini
 ADD ./htpasswd /etc/nginx/htpasswd
 
@@ -136,12 +148,17 @@ GALAXY_CONFIG_OVERRIDE_DEBUG=False \
 PG_DATA_DIR_DEFAULT=/var/lib/postgresql/9.3/main/ \
 PG_DATA_DIR_HOST=/export/postgresql/9.3/main/ \
 # We need to set $HOME for some Tool Shed tools (e.g Perl libs with $HOME/.cpan)
+## TODO: Discuss this. I think this is a no-no
 HOME=$GALAXY_HOME
+
+## TODO: check if we can do this with galaxy-extras
 
 # prefetch Python wheels
 RUN ./scripts/common_startup.sh && \
     # Install all required Node dependencies. This is required to get proxy support to work for Interactive Environments
     cd $GALAXY_ROOT/lib/galaxy/web/proxy/js && npm install
+
+## TODO:
 
 # Container Style
 ADD GalaxyDocker.png $GALAXY_CONFIG_DIR/web/welcome_image.png
@@ -152,6 +169,8 @@ USER root
 
 # Include all needed scripts from the host
 ADD ./setup_postgresql.py /usr/local/bin/setup_postgresql.py
+
+## TODO: use ansible-galaxy-extras
 ADD ./export_user_files.py /usr/local/bin/export_user_files.py
 
 # Configure PostgreSQL
@@ -175,11 +194,15 @@ RUN chown -R $GALAXY_USER:$GALAXY_USER $GALAXY_HOME/ansible
 # Activate additional Tool Sheds
 # Activate the Test Tool Shed during runtime, useful for testing repositories.
 ADD ./tool_sheds_conf.xml $GALAXY_HOME/tool_sheds_conf.xml
+
+## TODO: How will we handle this? A small template is probably a good idea.
+
 # Activate arbritrary Tool Sheds during build-time by manipulating the original tool_sheds_conf.xml file
 ADD ./add_tool_shed.py /usr/bin/add-tool-shed
 
 ADD ./startup_lite.sh /usr/bin/startup_lite
 # Script that enables easier downstream installation of tools (e.g. for different Galaxy Docker flavours)
+## TODO: can we deprecate this?
 ADD install_tools_wrapper.sh /usr/bin/install-tools
 # script to install BioJS visualizations
 ADD install_biojs_vis.sh /usr/bin/install-biojs
