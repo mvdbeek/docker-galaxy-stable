@@ -9,6 +9,9 @@ else
 fi
 usermod -u $SLURM_UID  $SLURM_USER_NAME
 groupmod -g $SLURM_GID $SLURM_USER_NAME
+if [ $ADD_SLURM_USER_TO_DOCKER_GROUP ]
+  then usermod -G docker $SLURM_USER_NAME
+fi
 if [ ! -f "$MUNGE_KEY_PATH" ]
   then
     cp /etc/munge/munge.key "$MUNGE_KEY_PATH"

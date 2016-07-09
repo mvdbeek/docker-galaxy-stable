@@ -10,7 +10,7 @@ RUN apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 \
     sh -c "echo deb https://apt.dockerproject.org/repo ubuntu-trusty main > /etc/apt/sources.list.d/docker.list" && \
     apt-get update && \
     apt-get install -y docker-engine
-RUN adduser galaxy &&\
+RUN adduser galaxy --home /var/home/galaxy &&\
     /usr/sbin/create-munge-key &&\
     touch /var/log/slurm-llnl/slurmctld.log /var/log/slurm-llnl/slurmd.log &&\
     mkdir /tmp/slurm && pip install --upgrade supervisor
@@ -20,6 +20,7 @@ ADD munge.conf /etc/default/munge
 RUN service munge start && service munge stop
 ADD startup.sh /usr/bin/startup.sh
 ADD supervisor_slurm.conf /etc/supervisor/conf.d/slurm.conf
+ADD supervisor_docker.conf /etc/supervisor/conf.d/docker.conf
 RUN chmod +x /usr/bin/startup.sh
 RUN locale-gen en_US.UTF-8 && dpkg-reconfigure locales
 ENV GALAXY_DIR=/export/galaxy-central \
@@ -29,8 +30,10 @@ ENV GALAXY_DIR=/export/galaxy-central \
     SLURM_GID=1450 \
     SLURM_PARTITION_NAME=work \
     SLURM_CLUSTER_NAME=Cluster \
-    SLURMD_AUTOSTART=True \
-    SLURMCTLD_AUTOSTART=True \
+    SLURMD_AUTOSTART=true \
+    SLURMCTLD_AUTOSTART=true \
+    DOCKER_AUTOSTART=false \
+    ADD_SLURM_USER_TO_DOCKER_GROUP=false \
     SLURM_CONF_PATH=/export/slurm.conf \
     MUNGE_KEY_PATH=/export/munge.key
 
